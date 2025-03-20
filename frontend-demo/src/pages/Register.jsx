@@ -6,105 +6,386 @@ function Register() {
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
+    if (password !== confirmPassword) {
+      setError("Password dan konfirmasi password tidak sama.");
+      return;
+    }
+
+    setLoading(true);
     try {
       await register(nama, email, password);
       navigate("/login");
     } catch (err) {
       setError("Registrasi gagal. Silahkan coba lagi.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div
       style={{
-        maxWidth: "400px",
-        margin: "50px auto",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
         padding: "20px",
-        boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+        background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
       }}
     >
-      <h2 style={{ textAlign: "center" }}>Register</h2>
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "450px",
+          padding: "40px 30px",
+          borderRadius: "16px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+          backgroundColor: "#fff",
+          animation: "fadeIn 0.5s ease-out",
+        }}
+      >
+        <style>
+          {`
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(20px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
 
-      {error && (
-        <div
+            .input-field:focus-within {
+              border-color: #2196f3;
+              box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+            }
+          `}
+        </style>
+
+        <h2
           style={{
-            background: "#ffeeee",
-            color: "red",
-            padding: "10px",
-            marginBottom: "15px",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>Nama:</label>
-          <input
-            type="text"
-            value={nama}
-            onChange={(e) => setNama(e.target.value)}
-            style={{ width: "100%", padding: "8px" }}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            Email:
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: "100%", padding: "8px" }}
-            required
-          />
-        </div>
-
-        <div style={{ marginBottom: "15px" }}>
-          <label style={{ display: "block", marginBottom: "5px" }}>
-            Password:
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: "100%", padding: "8px" }}
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            width: "100%",
-            padding: "10px",
-            background: "#4a90e2",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
+            textAlign: "center",
+            marginBottom: "30px",
+            color: "#333",
+            fontSize: "28px",
+            fontWeight: "600",
           }}
         >
           Register
-        </button>
-      </form>
+        </h2>
 
-      <div style={{ marginTop: "15px", textAlign: "center" }}>
-        <p>
-          Sudah punya akun?{" "}
-          <Link to="/login" style={{ color: "#4a90e2" }}>
-            Login
+        {error && (
+          <div
+            style={{
+              background: "#ffebee",
+              color: "#c62828",
+              padding: "12px 15px",
+              marginBottom: "25px",
+              borderRadius: "8px",
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              animation: "fadeIn 0.3s ease-out",
+            }}
+          >
+            <span style={{ marginRight: "8px", fontSize: "18px" }}>⚠️</span>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontWeight: "500",
+                color: "#555",
+                fontSize: "15px",
+              }}
+            >
+              Nama Lengkap
+            </label>
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                transition: "all 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
+              <span
+                style={{
+                  padding: "0 15px",
+                  color: "#888",
+                  fontSize: "18px",
+                }}
+              >
+                👤
+              </span>
+              <input
+                type="text"
+                value={nama}
+                onChange={(e) => setNama(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "14px 15px 14px 0",
+                  border: "none",
+                  fontSize: "16px",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                }}
+                placeholder="Nama lengkap"
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontWeight: "500",
+                color: "#555",
+                fontSize: "15px",
+              }}
+            >
+              Email
+            </label>
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                transition: "all 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
+              <span
+                style={{
+                  padding: "0 15px",
+                  color: "#888",
+                  fontSize: "18px",
+                }}
+              >
+                📧
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "14px 15px 14px 0",
+                  border: "none",
+                  fontSize: "16px",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                }}
+                placeholder="nama@example.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontWeight: "500",
+                color: "#555",
+                fontSize: "15px",
+              }}
+            >
+              Password
+            </label>
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                transition: "all 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
+              <span
+                style={{
+                  padding: "0 15px",
+                  color: "#888",
+                  fontSize: "18px",
+                }}
+              >
+                🔒
+              </span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "14px 15px 14px 0",
+                  border: "none",
+                  fontSize: "16px",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                }}
+                placeholder="Password"
+                required
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: "30px" }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: "8px",
+                fontWeight: "500",
+                color: "#555",
+                fontSize: "15px",
+              }}
+            >
+              Konfirmasi Password
+            </label>
+            <div
+              className="input-field"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                border: "1px solid #ddd",
+                borderRadius: "8px",
+                transition: "all 0.3s ease",
+                overflow: "hidden",
+              }}
+            >
+              <span
+                style={{
+                  padding: "0 15px",
+                  color: "#888",
+                  fontSize: "18px",
+                }}
+              >
+                🔒
+              </span>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: "14px 15px 14px 0",
+                  border: "none",
+                  fontSize: "16px",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                }}
+                placeholder="Konfirmasi password"
+                required
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: "100%",
+              padding: "14px",
+              background: loading ? "#90CAF9" : "#2196f3",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              cursor: loading ? "wait" : "pointer",
+              fontSize: "16px",
+              fontWeight: "600",
+              transition: "all 0.3s ease",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            {loading && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  height: "100%",
+                  width: "30px",
+                  background:
+                    "linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)",
+                  animation: "shimmer 1.5s infinite",
+                  transform: "skewX(-20deg)",
+                }}
+              >
+                <style>
+                  {`
+                    @keyframes shimmer {
+                      0% { transform: translateX(-100%) skewX(-20deg); }
+                      100% { transform: translateX(1000%) skewX(-20deg); }
+                    }
+                  `}
+                </style>
+              </span>
+            )}
+            {loading ? "Memproses..." : "Register"}
+          </button>
+        </form>
+
+        <div style={{ marginTop: "30px", textAlign: "center", color: "#666" }}>
+          <p>
+            Sudah punya akun?{" "}
+            <Link
+              to="/login"
+              style={{
+                color: "#2196f3",
+                fontWeight: "600",
+                textDecoration: "none",
+                transition: "color 0.3s",
+              }}
+              onMouseOver={(e) => {
+                e.target.style.color = "#1976d2";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.color = "#2196f3";
+              }}
+            >
+              Login
+            </Link>
+          </p>
+          <Link
+            to="/"
+            style={{
+              color: "#777",
+              fontSize: "14px",
+              textDecoration: "none",
+              display: "inline-block",
+              marginTop: "10px",
+              transition: "color 0.3s",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.color = "#555";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.color = "#777";
+            }}
+          >
+            ← Kembali ke Beranda
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

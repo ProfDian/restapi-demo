@@ -8,18 +8,28 @@ import {
 } from "../services/product";
 import { logout } from "../services/auth";
 
+// Import komponen-komponen
+import ProductCard from "../components/ProductCard";
+import DeleteConfirmation from "../components/DeleteConfirmation";
+import UpdateConfirmation from "../components/UpdateConfirmation";
+import SuccessToast from "../components/SuccessToast";
+import ErrorToast from "../components/ErrorToast";
+import CrudDialog from "../components/CrudDialog";
+
 function Products() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showForm, setShowForm] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState(null);
-  const [formData, setFormData] = useState({
-    nama: "",
-    stok: 0,
-    link_gambar: "",
-  });
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmUpdate, setConfirmUpdate] = useState(null);
+  const [crudDialog, setCrudDialog] = useState({
+    isOpen: false,
+    mode: "create",
+    product: null,
+  });
+  const [tempFormData, setTempFormData] = useState(null);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,9 +41,9 @@ function Products() {
       setLoading(true);
       const data = await getProducts();
       setProducts(data);
-      setError("");
+      setErrorMessage("");
     } catch (err) {
-      setError("Gagal mengambil data produk");
+      setErrorMessage("Gagal mengambil data produk");
     } finally {
       setLoading(false);
     }
@@ -44,24 +54,65 @@ function Products() {
     navigate("/login");
   };
 
-  const handleAddClick = () => {
-    setCurrentProduct(null);
-    setFormData({
-      nama: "",
-      stok: 0,
-      link_gambar: "",
+  // CRUD Dialog Handlers
+  const openCreateDialog = () => {
+    setCrudDialog({
+      isOpen: true,
+      mode: "create",
+      product: null,
     });
-    setShowForm(true);
   };
 
-  const handleEditClick = (product) => {
-    setCurrentProduct(product);
-    setFormData({
-      nama: product.nama,
-      stok: product.stok,
-      link_gambar: product.link_gambar || "",
+  const openEditDialog = (product) => {
+    setCrudDialog({
+      isOpen: true,
+      mode: "edit",
+      product: product,
     });
-    setShowForm(true);
+  };
+
+  const closeCrudDialog = () => {
+    setCrudDialog({
+      ...crudDialog,
+      isOpen: false,
+    });
+  };
+
+  const handleCrudSubmit = (formData) => {
+    if (crudDialog.mode === "edit") {
+      // Show update confirmation
+      setConfirmUpdate(crudDialog.product);
+      setTempFormData(formData);
+    } else {
+      // Directly create new product
+      handleCreateProduct(formData);
+    }
+    closeCrudDialog();
+  };
+
+  const handleCreateProduct = async (formData) => {
+    try {
+      await addProduct(formData);
+      setSuccessMessage("Produk berhasil ditambahkan!");
+      fetchProducts();
+    } catch (err) {
+      setErrorMessage("Gagal menambahkan produk");
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!confirmUpdate || !tempFormData) return;
+
+    try {
+      await updateProduct(confirmUpdate.id_barang, tempFormData);
+      setSuccessMessage("Produk berhasil diupdate!");
+      fetchProducts();
+    } catch (err) {
+      setErrorMessage("Gagal mengupdate produk");
+    } finally {
+      setConfirmUpdate(null);
+      setTempFormData(null);
+    }
   };
 
   const handleDeleteClick = (product) => {
@@ -73,351 +124,290 @@ function Products() {
 
     try {
       await deleteProduct(confirmDelete.id_barang);
+      setSuccessMessage("Produk berhasil dihapus!");
+      fetchProducts();
+    } catch (err) {
+      setErrorMessage("Gagal menghapus produk");
+    } finally {
       setConfirmDelete(null);
-      fetchProducts();
-    } catch (err) {
-      setError("Gagal menghapus produk");
     }
   };
 
-  const handleCancelDelete = () => {
-    setConfirmDelete(null);
-  };
+  // Toast Handlers
+  const clearErrorMessage = () => setErrorMessage("");
+  const clearSuccessMessage = () => setSuccessMessage("");
 
-  const handleFormChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: name === "stok" ? parseInt(value, 10) : value,
-    });
-  };
+  // Loading component
+  const LoadingIndicator = () => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "60px 0",
+      }}
+    >
+      <div
+        style={{
+          display: "inline-block",
+          width: "50px",
+          height: "50px",
+          border: "4px solid rgba(0, 0, 0, 0.1)",
+          borderLeftColor: "#2196f3",
+          borderRadius: "50%",
+          animation: "spin 1s linear infinite",
+        }}
+      ></div>
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+      <p style={{ marginTop: "20px", color: "#666", fontSize: "18px" }}>
+        Loading...
+      </p>
+    </div>
+  );
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (currentProduct) {
-        await updateProduct(currentProduct.id_barang, formData);
-      } else {
-        await addProduct(formData);
-      }
-      setShowForm(false);
-      fetchProducts();
-    } catch (err) {
-      setError("Gagal menyimpan produk");
-    }
-  };
+  // Empty state component
+  const EmptyState = () => (
+    <div
+      style={{
+        textAlign: "center",
+        padding: "50px 20px",
+        backgroundColor: "#f9f9f9",
+        borderRadius: "12px",
+        color: "#666",
+        marginTop: "20px",
+      }}
+    >
+      <div style={{ fontSize: "60px", marginBottom: "20px" }}>📦</div>
+      <h3
+        style={{
+          fontSize: "20px",
+          fontWeight: "600",
+          marginBottom: "10px",
+          color: "#444",
+        }}
+      >
+        Tidak ada produk
+      </h3>
+      <p style={{ fontSize: "16px", maxWidth: "500px", margin: "0 auto 20px" }}>
+        Anda belum memiliki produk. Klik tombol di bawah untuk menambahkan
+        produk baru
+      </p>
+      <button
+        onClick={openCreateDialog}
+        style={{
+          padding: "12px 25px",
+          background: "#2196f3",
+          color: "white",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer",
+          fontWeight: "500",
+          fontSize: "16px",
+          display: "inline-flex",
+          alignItems: "center",
+          transition: "all 0.2s ease",
+        }}
+        onMouseOver={(e) => {
+          e.target.style.background = "#1976d2";
+          e.target.style.transform = "translateY(-2px)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.background = "#2196f3";
+          e.target.style.transform = "translateY(0)";
+        }}
+      >
+        <span style={{ marginRight: "8px" }}>+</span> Tambah Produk
+      </button>
+    </div>
+  );
 
   return (
-    <div style={{ maxWidth: "800px", margin: "0 auto", padding: "20px" }}>
-      <div
+    <div
+      style={{
+        maxWidth: "1200px",
+        margin: "0 auto",
+        padding: "20px",
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* Toasts */}
+      <SuccessToast
+        message={successMessage}
+        isVisible={!!successMessage}
+        onClose={clearSuccessMessage}
+      />
+
+      <ErrorToast
+        message={errorMessage}
+        isVisible={!!errorMessage}
+        onClose={clearErrorMessage}
+      />
+
+      {/* Header */}
+      <header
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "20px",
+          marginBottom: "30px",
+          padding: "20px",
+          background: "linear-gradient(135deg, #2196f3, #1976d2)",
+          borderRadius: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+          position: "sticky",
+          top: "20px",
+          zIndex: 90,
         }}
       >
-        <h1>Manajemen Produk</h1>
-        <button
-          onClick={handleLogout}
+        <h1
           style={{
-            padding: "5px 10px",
-            background: "#f44336",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
+            margin: 0,
+            color: "#fff",
+            fontSize: "clamp(1.5rem, 4vw, 2rem)",
+            textShadow: "0 2px 4px rgba(0,0,0,0.2)",
           }}
         >
-          Logout
-        </button>
-      </div>
-
-      {error && (
+          Manajemen Produk
+        </h1>
         <div
           style={{
-            background: "#ffeeee",
-            color: "red",
-            padding: "10px",
-            marginBottom: "15px",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      <div style={{ marginBottom: "20px" }}>
-        <button
-          onClick={handleAddClick}
-          style={{
-            padding: "8px 12px",
-            background: "#4CAF50",
-            color: "white",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          Tambah Produk
-        </button>
-      </div>
-
-      {/* Konfirmasi Delete */}
-      {confirmDelete && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.5)",
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
+            gap: "15px",
+            flexWrap: "wrap",
+            justifyContent: "flex-end",
           }}
         >
-          <div
+          <button
+            onClick={openCreateDialog}
             style={{
-              backgroundColor: "white",
-              padding: "20px",
-              borderRadius: "5px",
-              maxWidth: "400px",
+              padding: "10px 20px",
+              background: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              fontWeight: "500",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
+              transition: "all 0.2s ease",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = "#43A047";
+              e.target.style.transform = "translateY(-2px)";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = "#4CAF50";
+              e.target.style.transform = "translateY(0)";
             }}
           >
-            <h3>Konfirmasi Hapus</h3>
-            <p>
-              Apakah Anda yakin ingin menghapus produk{" "}
-              <strong>{confirmDelete.nama}</strong>?
-            </p>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: "20px",
-                gap: "10px",
-              }}
-            >
-              <button
-                onClick={handleCancelDelete}
-                style={{
-                  padding: "8px 12px",
-                  background: "#ccc",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                style={{
-                  padding: "8px 12px",
-                  background: "#f44336",
-                  color: "white",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Hapus
-              </button>
-            </div>
+            <span style={{ marginRight: "8px", fontSize: "16px" }}>+</span>{" "}
+            Tambah Produk
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "10px 20px",
+              background: "rgba(255,255,255,0.2)",
+              color: "white",
+              border: "1px solid rgba(255,255,255,0.4)",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "500",
+              transition: "all 0.2s ease",
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = "rgba(255,255,255,0.3)";
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = "rgba(255,255,255,0.2)";
+            }}
+          >
+            Logout
+          </button>
+        </div>
+      </header>
+
+      {/* CRUD Dialog */}
+      <CrudDialog
+        isOpen={crudDialog.isOpen}
+        mode={crudDialog.mode}
+        product={crudDialog.product}
+        onClose={closeCrudDialog}
+        onSubmit={handleCrudSubmit}
+      />
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmation
+        product={confirmDelete}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={handleConfirmDelete}
+      />
+
+      {/* Update Confirmation */}
+      <UpdateConfirmation
+        isOpen={!!confirmUpdate}
+        product={confirmUpdate}
+        onClose={() => {
+          setConfirmUpdate(null);
+          setTempFormData(null);
+        }}
+        onConfirm={handleUpdateProduct}
+      />
+
+      {/* Content Area */}
+      <main style={{ flexGrow: 1 }}>
+        {loading ? (
+          <LoadingIndicator />
+        ) : products.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+              gap: "25px",
+              margin: "20px 0",
+            }}
+          >
+            {products.map((product) => (
+              <ProductCard
+                key={product.id_barang}
+                product={product}
+                onEdit={() => openEditDialog(product)}
+                onDelete={() => handleDeleteClick(product)}
+              />
+            ))}
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
-      {/* Form tambah/edit produk */}
-      {showForm && (
-        <div
-          style={{
-            marginBottom: "20px",
-            padding: "15px",
-            border: "1px solid #ddd",
-          }}
-        >
-          <h3>{currentProduct ? "Edit Produk" : "Tambah Produk"}</h3>
-          <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Nama Produk:
-              </label>
-              <input
-                type="text"
-                name="nama"
-                value={formData.nama}
-                onChange={handleFormChange}
-                style={{ width: "100%", padding: "8px" }}
-                required
-              />
-            </div>
-
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                Stok:
-              </label>
-              <input
-                type="number"
-                name="stok"
-                value={formData.stok}
-                onChange={handleFormChange}
-                style={{ width: "100%", padding: "8px" }}
-                required
-              />
-            </div>
-
-            <div style={{ marginBottom: "10px" }}>
-              <label style={{ display: "block", marginBottom: "5px" }}>
-                URL Gambar:
-              </label>
-              <input
-                type="text"
-                name="link_gambar"
-                value={formData.link_gambar}
-                onChange={handleFormChange}
-                style={{ width: "100%", padding: "8px" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button
-                type="submit"
-                style={{
-                  padding: "8px 12px",
-                  background: "#4a90e2",
-                  color: "white",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {currentProduct ? "Update" : "Simpan"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                style={{
-                  padding: "8px 12px",
-                  background: "#ccc",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Batal
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {loading ? (
-        <p>Loading...</p>
-      ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#f2f2f2" }}>
-              <th
-                style={{
-                  border: "1px solid #ddd",
-                  padding: "8px",
-                  textAlign: "left",
-                }}
-              >
-                Nama
-              </th>
-              <th
-                style={{
-                  border: "1px solid #ddd",
-                  padding: "8px",
-                  textAlign: "left",
-                }}
-              >
-                Stok
-              </th>
-              <th
-                style={{
-                  border: "1px solid #ddd",
-                  padding: "8px",
-                  textAlign: "left",
-                }}
-              >
-                Gambar
-              </th>
-              <th
-                style={{
-                  border: "1px solid #ddd",
-                  padding: "8px",
-                  textAlign: "left",
-                }}
-              >
-                Aksi
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.length > 0 ? (
-              products.map((product) => (
-                <tr key={product.id_barang}>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {product.nama}
-                  </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {product.stok}
-                  </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    {product.link_gambar ? (
-                      <img
-                        src={product.link_gambar}
-                        alt={product.nama}
-                        style={{ maxWidth: "50px", maxHeight: "50px" }}
-                      />
-                    ) : (
-                      "Tidak ada gambar"
-                    )}
-                  </td>
-                  <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                    <div style={{ display: "flex", gap: "5px" }}>
-                      <button
-                        onClick={() => handleEditClick(product)}
-                        style={{
-                          padding: "5px 10px",
-                          background: "#FFC107",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(product)}
-                        style={{
-                          padding: "5px 10px",
-                          background: "#f44336",
-                          color: "white",
-                          border: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td
-                  colSpan="4"
-                  style={{
-                    border: "1px solid #ddd",
-                    padding: "8px",
-                    textAlign: "center",
-                  }}
-                >
-                  Tidak ada produk
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      )}
+      {/* Footer */}
+      <footer
+        style={{
+          textAlign: "center",
+          margin: "40px 0 20px",
+          padding: "20px",
+          borderTop: "1px solid #eee",
+          color: "#888",
+          fontSize: "14px",
+        }}
+      >
+        <p>
+          &copy; {new Date().getFullYear()} Manajemen Produk. All Rights
+          Reserved.
+        </p>
+      </footer>
     </div>
   );
 }
